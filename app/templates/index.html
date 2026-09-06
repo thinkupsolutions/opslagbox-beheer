@@ -44,8 +44,11 @@
 <button style="grid-column:1/-1">Klant en box opslaan</button></form></details></section>
 
 <section id="boxen" class="page">
-<h1>Boxen & tags</h1><table><tr><th>Box</th><th>Tag</th><th>Klant</th><th>Huur</th><th>Status</th></tr>
-{% for b in boxes %}<tr><td>{{ b.box_number }}</td><td>{{ b.tag_number }}</td><td>{{ b.customer.name if b.customer else '-' }}</td><td>€ {{ '%.2f'|format(b.rent) }}</td><td>{{ b.status }}</td></tr>{% endfor %}
+<h1>Boxen & tags</h1><table><tr><th>Box</th><th>Tag</th><th>Klant</th><th>Huur</th><th>Status</th><th>Acties</th></tr>
+{% for b in boxes %}<tr><td>{{ b.box_number }}</td><td>{{ b.tag_number }}</td><td>{{ b.customer.name if b.customer else '-' }}</td><td>€ {{ '%.2f'|format(b.rent) }}</td><td>{{ b.status }}</td><td class="actions"><details><summary>Bewerken</summary><form method="post" action="/boxes/{{ b.id }}/edit" class="formgrid editform">
+<input name="box_number" value="{{ b.box_number }}" placeholder="Boxnummer" required><input name="tag_number" value="{{ b.tag_number }}" placeholder="Tagnummer"><input name="rent" value="{{ b.rent }}" type="number" step="0.01" placeholder="Huurprijs">
+<select name="status"><option{{ ' selected' if b.status == 'Beschikbaar' else '' }}>Beschikbaar</option><option{{ ' selected' if b.status == 'Verhuurd' else '' }}>Verhuurd</option></select><select name="customer_id"><option value="">Geen klant</option>{% for c in customers %}<option value="{{ c.id }}"{{ ' selected' if b.customer_id == c.id else '' }}>{{ c.name }}</option>{% endfor %}</select>
+<button>Wijzigingen opslaan</button></form></details></td></tr>{% endfor %}
 </table><details><summary>Extra box toevoegen aan bestaande klant</summary><form method="post" action="/boxes" class="formgrid">
 <input name="box_number" placeholder="Boxnummer" required><input name="tag_number" placeholder="Tagnummer"><input name="rent" type="number" step="0.01" placeholder="Huurprijs">
 <select name="status"><option>Beschikbaar</option><option>Verhuurd</option></select><select name="customer_id"><option value="">Geen klant</option>{% for c in customers %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
