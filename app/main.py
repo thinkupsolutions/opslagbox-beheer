@@ -202,6 +202,36 @@ def add_box(
     db.add(box); db.commit()
     return RedirectResponse("/#boxen", status_code=302)
 
+@app.post("/boxes/{box_id}/edit")
+def edit_box(
+    box_id: int,
+    request: Request,
+    box_number: str = Form(...),
+    tag_number: str = Form(""),
+    rent: str = Form(""),
+    status: str = Form("Beschikbaar"),
+    customer_id: str = Form(""),
+    db: Session = Depends(get_db),
+):
+    if not logged_in(request):
+        raise HTTPException(401)
+    box = db.get(Box, box_id)
+    if not box:
+        raise HTTPException(404, "Box niet gevonden")
+    duplicate = db.query(Box).filter(Box.box_number == box_number, Box.id != box_id).first()
+    if duplicate:
+        return RedirectResponse("/?error=Dit+boxnummer+bestaat+al#boxen", status_code=302)
+    cid = int(customer_id) if customer_id else None
+    if cid is not None and not db.get(Customer, cid):
+        return RedirectResponse("/?error=De+gekozen+klant+bestaat+niet#boxen", status_code=302)
+    box.box_number = box_number
+    box.tag_number = tag_number
+    box.rent = number_or_default(rent)
+    box.status = status
+    box.customer_id = cid
+    db.commit()
+    return RedirectResponse("/?message=Box+bijgewerkt#boxen", status_code=302)
+
 @app.post("/payments")
 def add_payment(
     request: Request,
