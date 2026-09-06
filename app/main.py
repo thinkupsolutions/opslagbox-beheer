@@ -37,6 +37,18 @@ def get_db():
 def logged_in(request: Request):
     return request.session.get("authenticated") is True
 
+def number_or_default(value: str, default: float = 0):
+    try:
+        return float(value.replace(",", ".")) if value.strip() else default
+    except ValueError:
+        return default
+
+def day_or_default(value: str, default: int = 1):
+    try:
+        return min(31, max(1, int(value))) if value.strip() else default
+    except ValueError:
+        return default
+
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request, db: Session = Depends(get_db)):
     if not logged_in(request):
@@ -87,8 +99,8 @@ def add_customer(
     email: str = Form(""),
     company_name: str = Form(""),
     kvk: str = Form(""),
-    monthly_amount: float = Form(0),
-    payment_day: int = Form(1),
+    monthly_amount: str = Form(""),
+    payment_day: str = Form(""),
     db: Session = Depends(get_db)
 ):
     if not logged_in(request):
@@ -97,7 +109,7 @@ def add_customer(
         name=name, customer_type=customer_type, address=address,
         postal_code=postal_code, city=city, phone=phone, email=email,
         company_name=company_name, kvk=kvk,
-        monthly_amount=monthly_amount, payment_day=payment_day
+        monthly_amount=number_or_default(monthly_amount), payment_day=day_or_default(payment_day)
     )
     db.add(c); db.commit()
     return RedirectResponse("/#klanten", status_code=302)
@@ -108,7 +120,7 @@ def edit_customer(
     customer_type: str = Form("Particulier"), address: str = Form(""),
     postal_code: str = Form(""), city: str = Form(""), phone: str = Form(""),
     email: str = Form(""), company_name: str = Form(""), kvk: str = Form(""),
-    monthly_amount: float = Form(0), payment_day: int = Form(1),
+    monthly_amount: str = Form(""), payment_day: str = Form(""),
     db: Session = Depends(get_db)
 ):
     if not logged_in(request):
@@ -120,7 +132,8 @@ def edit_customer(
     customer.address, customer.postal_code, customer.city = address, postal_code, city
     customer.phone, customer.email = phone, email
     customer.company_name, customer.kvk = company_name, kvk
-    customer.monthly_amount, customer.payment_day = monthly_amount, payment_day
+    customer.monthly_amount = number_or_default(monthly_amount)
+    customer.payment_day = day_or_default(payment_day)
     db.commit()
     return RedirectResponse("/?message=Klant+bijgewerkt#klanten", status_code=302)
 
@@ -142,12 +155,42 @@ def delete_customer(customer_id: int, request: Request, db: Session = Depends(ge
     db.commit()
     return RedirectResponse("/?message=Klant+verwijderd#klanten", status_code=302)
 
+@app.post("/customers-with-box")
+def add_customer_with_box(
+    request: Request,
+    name: str = Form(...), customer_type: str = Form("Particulier"),
+    address: str = Form(""), postal_code: str = Form(""), city: str = Form(""),
+    phone: str = Form(""), email: str = Form(""), company_name: str = Form(""),
+    kvk: str = Form(""), monthly_amount: str = Form(""), payment_day: str = Form(""),
+    box_number: str = Form(...), tag_number: str = Form(""), rent: str = Form(""),
+    status: str = Form("Verhuurd"), db: Session = Depends(get_db)
+):
+    if not logged_in(request):
+        raise HTTPException(401)
+    if db.query(Box).filter(Box.box_number == box_number).first():
+        return RedirectResponse("/?error=Dit+boxnummer+bestaat+al#klanten", status_code=302)
+    customer = Customer(
+        name=name, customer_type=customer_type, address=address,
+        postal_code=postal_code, city=city, phone=phone, email=email,
+        company_name=company_name, kvk=kvk,
+        monthly_amount=number_or_default(monthly_amount),
+        payment_day=day_or_default(payment_day),
+    )
+    db.add(customer)
+    db.flush()
+    db.add(Box(
+        box_number=box_number, tag_number=tag_number,
+        rent=number_or_default(rent), status=status, customer_id=customer.id,
+    ))
+    db.commit()
+    return RedirectResponse("/?message=Klant+en+box+opgeslagen#klanten", status_code=302)
+
 @app.post("/boxes")
 def add_box(
     request: Request,
     box_number: str = Form(...),
     tag_number: str = Form(""),
-    rent: float = Form(0),
+    rent: str = Form(""),
     status: str = Form("Beschikbaar"),
     customer_id: str = Form(""),
     db: Session = Depends(get_db)
@@ -155,7 +198,7 @@ def add_box(
     if not logged_in(request):
         raise HTTPException(401)
     cid = int(customer_id) if customer_id else None
-    box = Box(box_number=box_number, tag_number=tag_number, rent=rent, status=status, customer_id=cid)
+    box = Box(box_number=box_number, tag_number=tag_number, rent=number_or_default(rent), status=status, customer_id=cid)
     db.add(box); db.commit()
     return RedirectResponse("/#boxen", status_code=302)
 
