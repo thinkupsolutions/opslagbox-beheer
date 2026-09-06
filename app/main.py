@@ -102,6 +102,46 @@ def add_customer(
     db.add(c); db.commit()
     return RedirectResponse("/#klanten", status_code=302)
 
+@app.post("/customers/{customer_id}/edit")
+def edit_customer(
+    customer_id: int, request: Request, name: str = Form(...),
+    customer_type: str = Form("Particulier"), address: str = Form(""),
+    postal_code: str = Form(""), city: str = Form(""), phone: str = Form(""),
+    email: str = Form(""), company_name: str = Form(""), kvk: str = Form(""),
+    monthly_amount: float = Form(0), payment_day: int = Form(1),
+    db: Session = Depends(get_db)
+):
+    if not logged_in(request):
+        raise HTTPException(401)
+    customer = db.get(Customer, customer_id)
+    if not customer:
+        raise HTTPException(404, "Klant niet gevonden")
+    customer.name, customer.customer_type = name, customer_type
+    customer.address, customer.postal_code, customer.city = address, postal_code, city
+    customer.phone, customer.email = phone, email
+    customer.company_name, customer.kvk = company_name, kvk
+    customer.monthly_amount, customer.payment_day = monthly_amount, payment_day
+    db.commit()
+    return RedirectResponse("/?message=Klant+bijgewerkt#klanten", status_code=302)
+
+@app.post("/customers/{customer_id}/delete")
+def delete_customer(customer_id: int, request: Request, db: Session = Depends(get_db)):
+    if not logged_in(request):
+        raise HTTPException(401)
+    customer = db.get(Customer, customer_id)
+    if not customer:
+        raise HTTPException(404, "Klant niet gevonden")
+    in_use = (
+        db.query(Box).filter(Box.customer_id == customer_id).first()
+        or db.query(Payment).filter(Payment.customer_id == customer_id).first()
+        or db.query(Invoice).filter(Invoice.customer_id == customer_id).first()
+    )
+    if in_use:
+        return RedirectResponse("/?error=Verwijderen+kan+niet:+er+zijn+nog+boxen,+betalingen+of+facturen+gekoppeld#klanten", status_code=302)
+    db.delete(customer)
+    db.commit()
+    return RedirectResponse("/?message=Klant+verwijderd#klanten", status_code=302)
+
 @app.post("/boxes")
 def add_box(
     request: Request,
