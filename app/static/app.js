@@ -1,0 +1,3 @@
+function show(id){document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));(document.getElementById(id)||document.getElementById('dashboard')).classList.add('active');history.replaceState(null,'','#'+id)}
+function filterRows(input,id){const q=input.value.toLowerCase();document.querySelectorAll('#'+id+' tr:not(:first-child)').forEach(r=>r.style.display=r.innerText.toLowerCase().includes(q)?'':'none')}
+const start=location.hash.replace('#','')||'dashboard';show(start);window.addEventListener('hashchange',()=>show(location.hash.replace('#','')||'dashboard'));
