@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="nl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="stylesheet" href="/static/style.css"><title>Opslagbox Beheer</title></head><body>
+<header><div><b>Opslagbox Beheer</b><small>Online-ready versie 2</small></div><a href="/logout">Uitloggen</a></header>
+<nav>
+<button onclick="show('dashboard')">Dashboard</button><button onclick="show('klanten')">Klanten</button>
+<button onclick="show('boxen')">Boxen</button><button onclick="show('betalingen')">Betalingen</button><button onclick="show('facturen')">Facturen</button>
+</nav><main>
+
+<section id="dashboard" class="page">
+<h1>Dashboard</h1>
+<div class="cards">
+<div class="card"><span>Klanten</span><b>{{ customers|length }}</b></div>
+<div class="card"><span>Boxen</span><b>{{ boxes|length }}</b></div>
+<div class="card"><span>Verhuurd</span><b>{{ boxes|selectattr('status','equalto','Verhuurd')|list|length }}</b></div>
+<div class="card"><span>Vrij</span><b>{{ boxes|selectattr('status','equalto','Beschikbaar')|list|length }}</b></div>
+<div class="card"><span>Betalingen</span><b>{{ payments|length }}</b></div>
+</div>
+<h2>Laatste betalingen</h2>
+<table><tr><th>Datum</th><th>Box</th><th>Klant</th><th>Bedrag</th><th>Status</th></tr>
+{% for p in payments[:10] %}<tr><td>{{ p.payment_date }}</td><td>{{ p.box.box_number }}</td><td>{{ p.customer.name }}</td><td>€ {{ '%.2f'|format(p.amount) }}</td><td>{{ p.status }}</td></tr>{% endfor %}
+</table></section>
+
+<section id="klanten" class="page">
+<h1>Klanten</h1><input class="search" placeholder="Zoeken..." oninput="filterRows(this,'customerTable')">
+<table id="customerTable"><tr><th>Naam</th><th>Type</th><th>Adres</th><th>Contact</th><th>Bedrag</th><th>Betaaldag</th></tr>
+{% for c in customers %}<tr><td>{{ c.name }}</td><td>{{ c.customer_type }}</td><td>{{ c.address }} {{ c.postal_code }} {{ c.city }}</td><td>{{ c.phone }}<br>{{ c.email }}</td><td>€ {{ '%.2f'|format(c.monthly_amount) }}</td><td>{{ c.payment_day }}e</td></tr>{% endfor %}
+</table>
+<details><summary>Nieuwe klant toevoegen</summary><form method="post" action="/customers" class="formgrid">
+<input name="name" placeholder="Naam" required><select name="customer_type"><option>Particulier</option><option>Zakelijk</option></select>
+<input name="address" placeholder="Adres"><input name="postal_code" placeholder="Postcode"><input name="city" placeholder="Woonplaats">
+<input name="phone" placeholder="Telefoon"><input name="email" placeholder="E-mail"><input name="company_name" placeholder="Bedrijfsnaam">
+<input name="kvk" placeholder="KvK"><input name="monthly_amount" type="number" step="0.01" placeholder="Maandbedrag">
+<input name="payment_day" type="number" min="1" max="31" placeholder="Betaaldag"><button>Opslaan</button></form></details></section>
+
+<section id="boxen" class="page">
+<h1>Boxen & tags</h1><table><tr><th>Box</th><th>Tag</th><th>Klant</th><th>Huur</th><th>Status</th></tr>
+{% for b in boxes %}<tr><td>{{ b.box_number }}</td><td>{{ b.tag_number }}</td><td>{{ b.customer.name if b.customer else '-' }}</td><td>€ {{ '%.2f'|format(b.rent) }}</td><td>{{ b.status }}</td></tr>{% endfor %}
+</table><details><summary>Nieuwe box toevoegen</summary><form method="post" action="/boxes" class="formgrid">
+<input name="box_number" placeholder="Boxnummer" required><input name="tag_number" placeholder="Tagnummer"><input name="rent" type="number" step="0.01" placeholder="Huurprijs">
+<select name="status"><option>Beschikbaar</option><option>Verhuurd</option></select><select name="customer_id"><option value="">Geen klant</option>{% for c in customers %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+<button>Opslaan</button></form></details></section>
+
+<section id="betalingen" class="page">
+<h1>Betalingen</h1><p class="info">Alleen betalingen die aan een opslagbox zijn gekoppeld.</p>
+<table><tr><th>Datum</th><th>Box</th><th>Klant</th><th>Bedrag</th><th>Kenmerk</th><th>Status</th></tr>
+{% for p in payments %}<tr><td>{{ p.payment_date }}</td><td>{{ p.box.box_number }}</td><td>{{ p.customer.name }}</td><td>€ {{ '%.2f'|format(p.amount) }}</td><td>{{ p.reference }}</td><td>{{ p.status }}</td></tr>{% endfor %}
+</table><details><summary>Betaling toevoegen</summary><form method="post" action="/payments" class="formgrid">
+<select name="customer_id" required>{% for c in customers %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+<select name="box_id" required>{% for b in boxes %}<option value="{{ b.id }}">{{ b.box_number }}</option>{% endfor %}</select>
+<input name="amount" type="number" step="0.01" placeholder="Bedrag" required><input name="payment_date" type="date" required><input name="reference" placeholder="Betalingskenmerk">
+<select name="status"><option>Betaald</option><option>Openstaand</option><option>Te laat</option></select><button>Opslaan</button></form></details></section>
+
+<section id="facturen" class="page">
+<h1>Zakelijke facturen</h1><table><tr><th>Factuur</th><th>Klant</th><th>Box</th><th>Bedrag</th><th>Vervaldatum</th><th>Status</th></tr>
+{% for i in invoices %}<tr><td>{{ i.invoice_number }}</td><td>{{ i.customer.name }}</td><td>{{ i.box.box_number }}</td><td>€ {{ '%.2f'|format(i.amount) }}</td><td>{{ i.due_date }}</td><td>{{ 'Betaald' if i.paid else 'Openstaand' }}</td></tr>{% endfor %}
+</table><details><summary>Factuur toevoegen</summary><form method="post" action="/invoices" class="formgrid">
+<input name="invoice_number" placeholder="Factuurnummer" required><select name="customer_id">{% for c in customers %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
+<select name="box_id">{% for b in boxes %}<option value="{{ b.id }}">{{ b.box_number }}</option>{% endfor %}</select><input name="amount" type="number" step="0.01" placeholder="Bedrag">
+<input name="due_date" type="date" required><label class="check"><input type="checkbox" name="paid"> Betaald</label><button>Opslaan</button></form></details></section>
+
+</main><script src="/static/app.js"></script></body></html>
