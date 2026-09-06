@@ -30,17 +30,23 @@
 <input name="address" value="{{ c.address }}" placeholder="Adres"><input name="postal_code" value="{{ c.postal_code }}" placeholder="Postcode"><input name="city" value="{{ c.city }}" placeholder="Woonplaats"><input name="phone" value="{{ c.phone }}" placeholder="Telefoon"><input name="email" value="{{ c.email }}" placeholder="E-mail"><input name="company_name" value="{{ c.company_name }}" placeholder="Bedrijfsnaam"><input name="kvk" value="{{ c.kvk }}" placeholder="KvK"><input name="monthly_amount" value="{{ c.monthly_amount }}" type="number" step="0.01" placeholder="Maandbedrag"><input name="payment_day" value="{{ c.payment_day }}" type="number" min="1" max="31" placeholder="Betaaldag"><button>Wijzigingen opslaan</button></form></details>
 <form method="post" action="/customers/{{ c.id }}/delete" onsubmit="return confirm('Weet je zeker dat je deze klant wilt verwijderen?')"><button class="danger" type="submit">Verwijderen</button></form></td></tr>{% endfor %}
 </table>
-<details><summary>Nieuwe klant toevoegen</summary><form method="post" action="/customers" class="formgrid">
+<details open><summary>Nieuwe klant met box toevoegen</summary><form method="post" action="/customers-with-box" class="formgrid combinedform">
+<h3 style="grid-column:1/-1;margin:8px 0 0;color:#17324d">Klantgegevens</h3>
 <input name="name" placeholder="Naam" required><select name="customer_type"><option>Particulier</option><option>Zakelijk</option></select>
 <input name="address" placeholder="Adres"><input name="postal_code" placeholder="Postcode"><input name="city" placeholder="Woonplaats">
 <input name="phone" placeholder="Telefoon"><input name="email" placeholder="E-mail"><input name="company_name" placeholder="Bedrijfsnaam">
 <input name="kvk" placeholder="KvK"><input name="monthly_amount" type="number" step="0.01" placeholder="Maandbedrag">
-<input name="payment_day" type="number" min="1" max="31" placeholder="Betaaldag"><button>Opslaan</button></form></details></section>
+<input name="payment_day" type="number" min="1" max="31" placeholder="Betaaldag">
+<h3 style="grid-column:1/-1;margin:8px 0 0;color:#17324d">Boxgegevens</h3>
+<input name="box_number" placeholder="Boxnummer" required><input name="tag_number" placeholder="Tagnummer">
+<input name="rent" type="number" step="0.01" placeholder="Huurprijs">
+<select name="status"><option>Verhuurd</option><option>Beschikbaar</option></select>
+<button style="grid-column:1/-1">Klant en box opslaan</button></form></details></section>
 
 <section id="boxen" class="page">
 <h1>Boxen & tags</h1><table><tr><th>Box</th><th>Tag</th><th>Klant</th><th>Huur</th><th>Status</th></tr>
 {% for b in boxes %}<tr><td>{{ b.box_number }}</td><td>{{ b.tag_number }}</td><td>{{ b.customer.name if b.customer else '-' }}</td><td>€ {{ '%.2f'|format(b.rent) }}</td><td>{{ b.status }}</td></tr>{% endfor %}
-</table><details><summary>Nieuwe box toevoegen</summary><form method="post" action="/boxes" class="formgrid">
+</table><details><summary>Extra box toevoegen aan bestaande klant</summary><form method="post" action="/boxes" class="formgrid">
 <input name="box_number" placeholder="Boxnummer" required><input name="tag_number" placeholder="Tagnummer"><input name="rent" type="number" step="0.01" placeholder="Huurprijs">
 <select name="status"><option>Beschikbaar</option><option>Verhuurd</option></select><select name="customer_id"><option value="">Geen klant</option>{% for c in customers %}<option value="{{ c.id }}">{{ c.name }}</option>{% endfor %}</select>
 <button>Opslaan</button></form></details></section>
